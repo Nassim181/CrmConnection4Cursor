@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
+using System.Linq;
 
 namespace Dynamics365Connector;
 
@@ -31,8 +32,7 @@ class Program
                 Console.WriteLine("✓ Successfully connected to Dynamics 365 CRM!");
                 Console.WriteLine($"  Organization: {serviceClient.ConnectedOrgUniqueName}");
                 Console.WriteLine($"  Organization ID: {serviceClient.ConnectedOrgId}");
-                Console.WriteLine($"  User ID: {serviceClient.ConnectedUserId}");
-                Console.WriteLine($"  Service URL: {serviceClient.ConnectedOrgPublishedEndpoints[EndpointType.WebApplication]}");
+                Console.WriteLine($"  Service URL: {serviceClient.ConnectedOrgPublishedEndpoints?.Values.FirstOrDefault() ?? "N/A"}");
 
                 // Example: Retrieve account records
                 await RetrieveAccountsAsync(serviceClient);
