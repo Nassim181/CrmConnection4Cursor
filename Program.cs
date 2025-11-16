@@ -19,10 +19,33 @@ class Program
                 .AddEnvironmentVariables()
                 .Build();
 
-            var connectionString = configuration.GetConnectionString("Dataverse") 
-                ?? throw new InvalidOperationException("Connection string 'Dataverse' not found in configuration.");
+            // Build connection string from configuration
+            var dynamicsConfig = configuration.GetSection("Dynamics365");
+            var url = dynamicsConfig["Url"] ?? throw new InvalidOperationException("Dynamics365:Url not found in configuration.");
+            var username = dynamicsConfig["Username"] ?? throw new InvalidOperationException("Dynamics365:Username not found in configuration.");
+            var password = dynamicsConfig["Password"] ?? throw new InvalidOperationException("Dynamics365:Password not found in configuration.");
+            var authType = dynamicsConfig["AuthType"] ?? "OAuth";
+            var redirectUri = dynamicsConfig["RedirectUri"] ?? "http://localhost";
+            var loginPrompt = dynamicsConfig["LoginPrompt"] ?? "Auto";
+            var appId = dynamicsConfig["AppId"];
+
+            var connectionString = $"AuthType={authType};Url={url};Username={username};Password={password};RedirectUri={redirectUri};LoginPrompt={loginPrompt}";
+            
+            // AppId is optional - if not specified, the SDK uses the default public client AppId
+            // Default AppId: 51f81489-12ee-4a9e-aaae-a2591f45987d (Microsoft's public client)
+            if (!string.IsNullOrWhiteSpace(appId))
+            {
+                connectionString += $";AppId={appId}";
+                Console.WriteLine($"Using custom AppId: {appId}");
+            }
+            else
+            {
+                Console.WriteLine("Using default public client AppId: 51f81489-12ee-4a9e-aaae-a2591f45987d");
+            }
 
             Console.WriteLine("Connecting to Dynamics 365 CRM Online...");
+            Console.WriteLine($"Organization URL: {url}");
+            Console.WriteLine($"Username: {username}");
             Console.WriteLine($"Connection String: {connectionString.Replace("Password=", "Password=***")}");
 
             // Create service client
