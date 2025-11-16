@@ -23,30 +23,79 @@ class Program
                 ?? throw new InvalidOperationException("Connection string 'Dataverse' not found in configuration.");
 
             Console.WriteLine("Connecting to Dynamics 365 CRM Online...");
+            Console.WriteLine($"Connection String: {connectionString.Replace("Password=", "Password=***")}");
 
             // Create service client
-            using var serviceClient = new ServiceClient(connectionString);
-
-            if (serviceClient.IsReady)
+            ServiceClient? serviceClient = null;
+            try
             {
-                Console.WriteLine("✓ Successfully connected to Dynamics 365 CRM!");
-                Console.WriteLine($"  Organization: {serviceClient.ConnectedOrgUniqueName}");
-                Console.WriteLine($"  Organization ID: {serviceClient.ConnectedOrgId}");
-                Console.WriteLine($"  Service URL: {serviceClient.ConnectedOrgPublishedEndpoints?.Values.FirstOrDefault() ?? "N/A"}");
-
-                // Example: Retrieve account records
-                await RetrieveAccountsAsync(serviceClient);
-
-                // Example: Create a test account
-                await CreateTestAccountAsync(serviceClient);
+                serviceClient = new ServiceClient(connectionString);
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("✗ Failed to connect to Dynamics 365 CRM.");
-                Console.WriteLine($"  Last Error: {serviceClient.LastError}");
-                if (serviceClient.LastException != null)
+                Console.WriteLine($"✗ Exception during connection creation:");
+                Console.WriteLine($"  Type: {ex.GetType().Name}");
+                Console.WriteLine($"  Message: {ex.Message}");
+                if (ex.InnerException != null)
                 {
-                    Console.WriteLine($"  Exception: {serviceClient.LastException.Message}");
+                    Console.WriteLine($"  Inner Exception: {ex.InnerException.Message}");
+                    if (ex.InnerException.InnerException != null)
+                    {
+                        Console.WriteLine($"  Inner Inner Exception: {ex.InnerException.InnerException.Message}");
+                    }
+                }
+                Console.WriteLine($"  Stack Trace: {ex.StackTrace}");
+                return;
+            }
+
+            if (serviceClient == null)
+            {
+                Console.WriteLine("✗ Failed to create service client.");
+                return;
+            }
+
+            using (serviceClient)
+            {
+                if (serviceClient.IsReady)
+                {
+                    Console.WriteLine("✓ Successfully connected to Dynamics 365 CRM!");
+                    Console.WriteLine($"  Organization: {serviceClient.ConnectedOrgUniqueName}");
+                    Console.WriteLine($"  Organization ID: {serviceClient.ConnectedOrgId}");
+                    Console.WriteLine($"  Service URL: {serviceClient.ConnectedOrgPublishedEndpoints?.Values.FirstOrDefault() ?? "N/A"}");
+
+                    // Example: Retrieve account records
+                    await RetrieveAccountsAsync(serviceClient);
+
+                    // Example: Create a test account
+                    await CreateTestAccountAsync(serviceClient);
+                }
+                else
+                {
+                    Console.WriteLine("✗ Failed to connect to Dynamics 365 CRM.");
+                    Console.WriteLine($"  Last Error: {serviceClient.LastError}");
+                    if (serviceClient.LastException != null)
+                    {
+                        Console.WriteLine($"  Exception: {serviceClient.LastException.Message}");
+                        Console.WriteLine($"  Exception Type: {serviceClient.LastException.GetType().Name}");
+                        
+                        // Check for inner exception
+                        if (serviceClient.LastException.InnerException != null)
+                        {
+                            Console.WriteLine($"  Inner Exception: {serviceClient.LastException.InnerException.Message}");
+                        }
+                    }
+                    
+                    // Additional troubleshooting info
+                    if (serviceClient.LastError?.Contains("AADSTS500113") == true || 
+                        serviceClient.LastException?.Message?.Contains("AADSTS500113") == true)
+                    {
+                        Console.WriteLine("\n  Troubleshooting:");
+                        Console.WriteLine("  The redirect URI is not registered in Azure AD.");
+                        Console.WriteLine("  Try one of these solutions:");
+                        Console.WriteLine("  1. Register the redirect URI in Azure AD App Registration");
+                        Console.WriteLine("  2. Use the default AppId: 51f81489-12ee-4a9e-aaae-a2591f45987d");
+                        Console.WriteLine("  3. Use redirect URI: app://58145B91-0C36-4501-8424-6E796E04D6B7");
+                    }
                 }
             }
         }
